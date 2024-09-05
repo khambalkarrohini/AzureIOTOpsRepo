@@ -1,0 +1,41 @@
+apiVersion: connectivity.iotoperations.azure.com/v1beta1
+kind: Dataflow
+metadata:
+  name: my-dataflow
+spec:
+  profileRef: my-dataflow-profile
+  mode: enabled
+  operations:
+    - operationType: source
+      name: my-source
+      sourceSettings:
+        endpointRef: mq
+        dataSources:
+          - thermostats/+/telemetry/temperature/#
+          - humidifiers/+/telemetry/humidity/#
+        serializationFormat: json
+    - operationType: builtInTransformation
+      name: my-transformation
+      builtInTransformationSettings:
+        filter:
+          - inputs:
+              - 'temperature.Value'
+              - '"Tag 10".Value'
+            expression: "$1*$2<100000"
+        map:
+          - inputs:
+              - '*'
+            output: '*'
+          - inputs:
+              - temperature.Value
+            output: TemperatureF
+            expression: cToF($1)
+          - inputs:
+              - '"Tag 10".Value'
+            output: 'Tag 10'
+        serializationFormat: json
+    - operationType: destination
+      name: my-destination
+      destinationSettings:
+        endpointRef: kafka
+        dataDestination: factory
